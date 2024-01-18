@@ -3,9 +3,13 @@ from concurrent.futures import ProcessPoolExecutor
 import asyncio 
 from random import randrange
 import subprocess
- 
+import timeit 
+
+# MODE
+MODE = 2
+
 # Concurrent executors to perform this work.
-MAX_WORKERS = 2
+MAX_WORKERS = 4
 # Some inputs that we can iterate over.
 RANDOM_SLEEP_UBOUNDS = [
     11,
@@ -14,6 +18,16 @@ RANDOM_SLEEP_UBOUNDS = [
     23,
 ]
 
+def sleep_random_mode2(sleep_max):
+    import time
+    random_number = randrange(0,sleep_max)
+    print(f'sleeping {sleep_max}')
+    time.sleep(sleep_max)
+    print(f'Done sleeping {sleep_max}, great success')
+
+
+
+
 def sleep_random(sleep_max):
     """
     This function can be whatever you want it to be, 
@@ -21,11 +35,11 @@ def sleep_random(sleep_max):
     Because sleep is a blocking function it makes for a good example.
     """
     random_number = randrange(0,sleep_max)
-    print(f'sleeping {random_number}')
+    print(f'sleeping {sleep_max}')
     # NOTE that shell=True is not secure, so don't use this for untrusted inputs.
     # See https://docs.python.org/3/library/subprocess.html#security-considerations
-    sp = subprocess.run(f'python sleep_random.py {random_number}',shell=True)
-    print(f'Done sleeping {random_number}, exit code is {sp.returncode}')
+    sp = subprocess.run(f'python sleep_random.py {sleep_max}',shell=True)
+    print(f'Done sleeping {sleep_max}, exit code is {sp.returncode}')
 
 
 def main():
@@ -49,9 +63,21 @@ def main():
             # if there was an exception prior to task creation we would get it here
             await asyncio.gather(*tasks)
 
+    def blocking():
+        with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            for i in RANDOM_SLEEP_UBOUNDS:
+                executor.submit(sleep_random_mode2, i)
     # instantiate the loop and just run everything inside of that
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(non_blocking())
+
+    if MODE == 1:
+        loop = asyncio.get_event_loop()
+        def mode1():
+            loop.run_until_complete(non_blocking())
+        print(timeit.timeit(mode1, number=1))
+    elif MODE == 2:
+        print(timeit.timeit(blocking,number=1))
+    else:
+        raise NotImplementedError("I didn't make a mode for that")
 
 
 if __name__ == '__main__':
